@@ -1,0 +1,55 @@
+---
+title: " Health and Economic Impact From Severe Weather in the US "
+output: html_document
+---
+## Synopsis
+Severe weather such as stroms and flood can significantlt affect both population health and economics in the US. Understanding the consequences caused by such weather can provide us a helpful tool for future disaster prevention and rebuild. This analysis takes advantage of the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. Analysis shows that tornado on average caused the most death and injuries in the past 60 years in the US. On the other hand, the weather type responsiblle for the most economic loss is 
+
+```{r loading_package,include=FALSE,message=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## read in data
+```{r readin,cache=TRUE}
+weather_data<- read.csv('repdata-data-StormData.csv.bz2')
+weather_data<- tbl_df(weather_data)
+```
+
+## find the most leathal weather type
+```{r find_most_leathal_weather,cache=TRUE}
+names(weather_data)
+health_related_data<- weather_data%>%
+                  select(c(BGN_DATE,EVTYPE,FATALITIES,INJURIES))%>%
+                  separate(BGN_DATE,c('year','time'),' ')%>%
+                  select(year,EVTYPE,FATALITIES,INJURIES)%>%
+                  mutate(year=as.Date(year,'%m/%d/%Y'))%>%  
+                  mutate(year=as.factor(substr(as.character(year),1,4)))
+
+sorted_data<- health_related_data%>%
+                  group_by(EVTYPE)%>%
+                  summarise(death_injuried=sum(FATALITIES,INJURIES))%>%
+                  arrange(desc(death_injuried))
+sorted_data
+```
+
+## data presentation of TORNADO
+```{r data_presentation}
+T_data<- health_related_data%>%
+          mutate(EVTYPE=as.character(EVTYPE))%>%
+          filter(EVTYPE=='TORNADO')%>%
+          group_by(year)%>%
+          summarise(death=sum(FATALITIES),injuried=sum(INJURIES))
+T_data
+p<-ggplot(T_data,aes(as.Date(year,'%Y'),death))
+p+geom_line(color='red')+xlab('year')+ggtitle('Death caused by Tornado')
+
+q<-ggplot(T_data,aes(as.Date(year,'%Y'),injuried))
+q+geom_line(color='blue')+xlab('year')+ggtitle('Injury caused by Tornado')
+
+g<- ggplot(T_data,aes(x=as.Date(year,'%Y')))+
+  geom_bar(aes(y=injuried,color='red'),stat = 'identity')+
+  geom_bar(aes(y=death,color='black'),stat = 'identity')
+
+g
